@@ -1,0 +1,10 @@
+2025-12-04T09:00:00Z | USER_1001 | I love the quality of the product, but the checkout process was extremely slow and failed twice.
+2025-12-04T09:01:15Z | USER_1002 | Delivery was super fast, arrived a day earlier than expected. Highly recommended!
+2025-12-04T09:02:45Z | USER_1003 | The price is too high for what you get. I'm disappointed with the final bill.
+2025-12-04T09:04:00Z | USER_1004 | This is an amazing new feature! Zero issues, everything just works.
+2025-12-04T09:05:10Z | USER_1005 | My package hasn't arrived yet. The estimated speed was supposed to be quicker. Frustrating.
+2025-12-04T09:06:20Z | USER_1006 | Excellent service, I had no complaints at all about the customer support team.
+2025-12-04T09:07:35Z | USER_1007 | The cost structure is unclear, and the monthly payment schedule seems excessive.
+2025-12-04T09:08:50Z | USER_1008 | Everything was perfect and easy to use. Great experience!
+2025-12-04T09:10:00Z | USER_1009 | The application is very buggy, it keeps crashing when I try to pay.
+2025-12-04T09:11:15Z | USER_1010 | The delivery was delayed, but the item itself is great. Mixed feelings.
