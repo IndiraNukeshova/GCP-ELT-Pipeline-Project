@@ -4,6 +4,7 @@ import re
 import datetime
 import logging
 from textblob import TextBlob
+from langdetect import detect
 
 # ----------------- PROJECT CONFIGURATION -----------------
 PROJECT_ID = 'bigdata-elt-project'
@@ -11,6 +12,26 @@ BUCKET_NAME = 'my-raw-data-pipeline-1985'
 REGION = 'us-central1'
 INPUT_FILE = f'gs://{BUCKET_NAME}/raw_logs.txt'
 OUTPUT_TABLE = f'{PROJECT_ID}:analytics_data.processed_logs'
+
+# ----------------- BIGQUERY SCHEMA DEFINITION -----------------
+def get_bigquery_schema():
+    """Определяет явную схему для таблицы processed_logs."""
+    return {
+        'fields': [
+            {'name': 'log_timestamp', 'type': 'TIMESTAMP', 'mode': 'REQUIRED'},
+            {'name': 'user_id', 'type': 'STRING', 'mode': 'REQUIRED'},
+            {'name': 'raw_message', 'type': 'STRING', 'mode': 'REQUIRED'},
+
+            # Поля, созданные в исходном пайплайне
+            {'name': 'sentiment_score', 'type': 'FLOAT', 'mode': 'NULLABLE'},
+            {'name': 'main_topic', 'type': 'STRING', 'mode': 'NULLABLE'},
+            {'name': 'processing_time', 'type': 'TIMESTAMP', 'mode': 'REQUIRED'},
+
+            # Поля для расширенного анализа (Advanced Analysis)
+            {'name': 'language_code', 'type': 'STRING', 'mode': 'REQUIRED'},
+            {'name': 'word_count', 'type': 'INTEGER', 'mode': 'REQUIRED'}
+        ]
+    }
 
 
 # --------- TRANSFORMATION FUNCTIONS (T - Transform) ----------
@@ -45,23 +66,49 @@ class AnalyzeText(beam.DoFn):
     def process(self, element):
         message = element['raw_message']
 
-        # 1. Sentiment Analysis
-        blob = TextBlob(message)
-        sentiment_score = blob.sentiment.polarity
+        # 1. Подсчет слов (Word Count)
+        word_count = len(message.split())
+        element['word_count'] = word_count
+        
+        # 2. Обнаружение языка (Language Detection)
+        try:
+            # langdetect часто требует, чтобы строка была достаточно длинной
+            lang_code = detect(message)
+        except:
+            lang_code = 'unknown' 
+            
+        element['language_code'] = lang_code
+        
+        # Инициализация аналитических полей
+        sentiment_score = None
+        main_topic = 'general'
+        
+        # 3. Анализ тональности и темы (только для английского языка)
+        if lang_code == 'en':
+            try:
+                blob = TextBlob(message)
+                sentiment_score = blob.sentiment.polarity
+                
+                # Простая логика определения темы (Topic Extraction)
+                message_lower = message.lower()
+                
+                if re.search(r'delivery|package|arrived|speed', message_lower):
+                    main_topic = 'Delivery'
+                elif re.search(r'payment|fee|invoice|bill|price', message_lower):
+                    main_topic = 'Payment Issues'
+                elif re.search(r'error|bug|crash|fail', message_lower):
+                    main_topic = 'Bug/Error'
+                else:
+                    main_topic = 'Other'
+                    
+            except Exception as e:
+                sentiment_score = None
+                main_topic = 'NLP_Error'
 
-        # 2. Topic Modeling (Simplified Example)
-        main_topic = 'Other'
-        if re.search(r'payment|bill|price|cost', message, re.IGNORECASE):
-            main_topic = 'Payment Issues'
-        elif re.search(r'delivery|speed|arrive|fast', message, re.IGNORECASE):
-            main_topic = 'Delivery'
-
-        # 3. Adding the extracted fields to our object
-        element['sentiment_score'] = float(sentiment_score) # FLOAT
-        element['main_topic'] = main_topic # STRING
-        element['processing_time'] = datetime.datetime.now(datetime.timezone.utc).isoformat() # TIMESTAMP
-
-        # 4. Check that all types comply with the BigQuery schema.
+        # Обновление элемента
+        element['sentiment_score'] = sentiment_score
+        element['main_topic'] = main_topic
+        element['processing_time'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         element['log_timestamp'] = element['log_timestamp'].isoformat() 
 
         yield element
@@ -93,6 +140,7 @@ def run_pipeline():
          # 4. LOAD
          | 'WriteToBigQuery' >> beam.io.WriteToBigQuery(
              table=OUTPUT_TABLE,
+             schema=get_bigquery_schema(),
              create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED,
              write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND
          )

@@ -7,7 +7,8 @@ setuptools.setup(
         'apache-beam[gcp]',
         'google-cloud-bigquery',
         'TextBlob',
-        'numpy'
+        'numpy',
+        'langdetect'
     ],
     packages=setuptools.find_packages(),
     description='Dataflow pipeline for unstructured data processing and sentiment analysis.',
