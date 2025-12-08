@@ -33,6 +33,9 @@ def get_bigquery_schema():
         ]
     }
 
+# ----------------- TAGS FOR DLQ -----------------
+SUCCESS_TAG = 'success'
+DLQ_TAG = 'dlq'
 
 # --------- TRANSFORMATION FUNCTIONS (T - Transform) ----------
 class ParseLogLine(beam.DoFn):
